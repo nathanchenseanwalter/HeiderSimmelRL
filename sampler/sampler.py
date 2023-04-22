@@ -51,5 +51,5 @@ class EGreedy:
             new_policy = Variable(torch.from_numpy(p).float().cuda())
         else:
             new_policy = Variable(torch.from_numpy(p).float())
-        action = new_policy.multinomial()
+        action = new_policy.multinomial(1)
         return action
