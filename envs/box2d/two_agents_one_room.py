@@ -129,12 +129,6 @@ class Blocking_v0:
              (-self.room_dim[0] / 2, -self.room_dim[1] / 2),
              (-self.room_dim[0] / 2,  self.room_dim[1] / 2 - self.door_length)]
         )
-        # reward
-        self.item_pos = (22, 18)
-        # body = self.world.CreateStaticBody(position=self.item_pos)
-        body = self.world.CreateDynamicBody(position=self.item_pos)
-        body.CreateCircleFixture(radius=self.item_size, density=100, friction=0.3)
-        self.item = body
         self.agents = []
         # agent 1
         if self.random_pos:
@@ -163,7 +157,6 @@ class Blocking_v0:
                 cv2.VideoWriter_fourcc(*'mp4v'), 
                 20, 
                 (self.SCREEN_WIDTH, self.SCREEN_HEIGHT))
-        
 
 
     def start(self):
