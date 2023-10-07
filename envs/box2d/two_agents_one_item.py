@@ -77,7 +77,9 @@ def _in_room(body, room):
 
 def _get_dist(pos1, pos2):
     """get distance between two points"""
-    return ((pos1[0] - pos2[0]) ** 2 + (pos1[1] - pos2[1]) ** 2) ** 0.5
+    print(pos1)
+    print(pos2[0])
+    return np.linalg.norm(pos1 - pos2[0])
 
 
 def _get_obs(screen, SCREEN_WIDTH, SCREEN_HEIGHT):

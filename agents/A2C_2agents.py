@@ -137,8 +137,8 @@ class A2C_2agents:
                     = self.act(state_all, hx_all, cx_all)
             nb_steps += 1
             c_r_all  = [c_r + current_r for c_r, current_r in zip(c_r_all, current_r_all)] # reward?
-            if nb_steps >= self.args.max_episode_length:
-                break
+            # if nb_steps >= self.args.max_episode_length:
+            #     break
 
         self.env.release()
 

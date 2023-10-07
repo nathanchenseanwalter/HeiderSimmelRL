@@ -55,7 +55,6 @@ def _get_door(body):
 
     return [vertices1[0], vertices2[-1]]
 
-
 def _get_room_bound(body):
     """get the boundary of a room (upper-left corner + bottom-right corner)"""
     x_list, y_list = [], []
@@ -67,14 +66,6 @@ def _get_room_bound(body):
     min_x, min_y = min(x_list), min(y_list)
     max_x, max_y = max(x_list), max(y_list)
     return (min_x, min_y, max_x, max_y)
-
-
-def _in_room(body, room):
-    body_bound = _get_body_bound(body)
-    min_x, min_y, max_x, max_y = _get_room_bound(room)
-    return body_bound[2] >= min_x and body_bound[3] >= min_y and \
-           body_bound[0] <= max_x and body_bound[1] <= max_y
-
 
 def _get_obs(screen, SCREEN_WIDTH, SCREEN_HEIGHT):
     string_image = pygame.image.tostring(screen, 'RGB')
@@ -111,8 +102,7 @@ class Avoiding_v0:
             pygame.display.set_caption('Avoiding_v0')
             self.clock = pygame.time.Clock()
         self.room_dim = (16, 16)
-        self.door_length = 3
-        self.item_size = 1
+        self.item_size = 0.25
         self.agent1_pos_list = [(16 + 7, 12 - 7), (16 - 7, 12 - 7), (16 + 7, 12 + 7)]
         self.agent2_pos_list = [(10, 6), (22, 6), (22, 18), (10, 18)]
         self.random_pos = random_pos
@@ -133,29 +123,39 @@ class Avoiding_v0:
              (-self.room_dim[0] / 2, -self.room_dim[1] / 2),
              (-self.room_dim[0] / 2,  self.room_dim[1] / 2)]
         )
+        
+        self.item_pos = []
+        self.item = []
         # item 1
-        self.item_pos = (22, 18)
-        # body = self.world.CreateStaticBody(position=self.item_pos)
-        body = self.world.CreateDynamicBody(position=self.item_pos)
-        body.CreateCircleFixture(radius=self.item_size, density=100, friction=0.3)
-        self.item = body
+        self.item_pos.append([random.randrange(16-self.room_dim[0]/2,16+self.room_dim[0]/2),
+                         random.randrange(12-self.room_dim[0]/2,12+self.room_dim[0]/2)])
+        body = self.world.CreateStaticBody(position=self.item_pos[-1])
+        body.CreateCircleFixture(radius=self.item_size)
+        self.item.append(body)
+        # item 2
+        self.item_pos.append([random.randrange(16-self.room_dim[0]/2,16+self.room_dim[0]/2),
+                         random.randrange(12-self.room_dim[0]/2,12+self.room_dim[0]/2)])
+        body = self.world.CreateStaticBody(position=self.item_pos[-1])
+        body.CreateCircleFixture(radius=self.item_size)
+        self.item.append(body)
+        
         self.agents = []
         # agent 1
         if self.random_pos:
             x, y = random.choice(self.agent1_pos_list)
             body = self.world.CreateDynamicBody(position=(x, y))
-            body.CreateCircleFixture(radius=1, density=1, friction=0.3, restitution=self.restitution)
+            body.CreateCircleFixture(radius=0.5, density=1, friction=0.3, restitution=self.restitution)
             self.agents.append(body)
             self.trajectories = [[(x, y)]]
         else:
             body = self.world.CreateDynamicBody(position=(16 + 4, 12 - 4))
-            body.CreateCircleFixture(radius=1, density=1, friction=0.3, restitution=self.restitution)
+            body.CreateCircleFixture(radius=0.5, density=1, friction=0.3, restitution=self.restitution)
             self.agents.append(body)
             self.trajectories = [[(16 + 4, 12 - 4)]]
         # agent 2
         x, y = random.choice(self.agent2_pos_list)
         body = self.world.CreateDynamicBody(position=(x, y))
-        body.CreateCircleFixture(radius=1, density=1, friction=0.3)
+        body.CreateCircleFixture(radius=0.5, density=1, friction=0.3)
         self.agents.append(body)
         self.trajectories.append([(x, y)])
         self.steps = 0
@@ -209,9 +209,9 @@ class Avoiding_v0:
             self.world.DestroyBody(self.agents[agent_id])
             self.agents[agent_id] = self.world.CreateDynamicBody(position=(x, y), angle=0)
             if agent_id == 0:
-                self.agents[agent_id].CreateCircleFixture(radius=1, density=1, friction=0.3, restitution=self.restitution)
+                self.agents[agent_id].CreateCircleFixture(radius=0.5, density=1, friction=0.3, restitution=self.restitution)
             else:
-                self.agents[agent_id].CreateCircleFixture(radius=1, density=1, friction=0.3)
+                self.agents[agent_id].CreateCircleFixture(radius=0.5, density=1, friction=0.3)
             return
         else:
             print('ERROR: invalid action!')
@@ -242,13 +242,19 @@ class Avoiding_v0:
 
     def terminal(self):
         """check if the goal is achieved"""
-        return not _in_room(self.agents[0], self.room)
+        item_touch_1 = _get_dist(self.agents_pos[0], self.item_pos[0]) < 0.5 + self.item_size + 0.1
+        item_touch_2 = _get_dist(self.agents_pos[1], self.item_pos[1]) < 0.5 + self.item_size + 0.1
+        return item_touch_1 or item_touch_2
 
 
     def get_reward(self):
-        get_item = 1.0 if _get_dist(self.agents_pos[0], self.item_pos) < 1 + self.item_size + 0.3 else 0.0
-        return [get_item, 0]
-
+        if _get_dist(self.agents_pos[0], self.agents_pos[1]) < 1 + 1 + 0.3:
+            get_item_1 = -1.0
+            get_item_2 = -1.0
+        else:
+            get_item_1 = 1.0 if _get_dist(self.agents_pos[0], self.item_pos[0]) < 1 + self.item_size + 0.2 else 0.0
+            get_item_2 = 1.0 if _get_dist(self.agents_pos[1], self.item_pos[1]) < 1 + self.item_size + 0.2 else 0.0
+        return [get_item_1, get_item_2]
 
     def render(self):
         """render the environment"""
@@ -256,9 +262,11 @@ class Avoiding_v0:
             0: (0, 0, 0, 255), # ground body
             1: (255, 0, 0, 255), # agent 1
             2: (0, 255, 0, 255), # agent 2
+            3: (0, 255, 255, 255), # item 1
+            4: (255, 255, 0, 255), # item 2
         }
         self.screen.fill((255, 255, 255, 255))
-        for body_id, body in enumerate([self.room, self.agents[0], self.agents[1]]):
+        for body_id, body in enumerate([self.room, self.agents[0], self.agents[1], self.item[0], self.item[1]]):
             for fixture in body.fixtures:
                 fixture.shape.draw(self.screen, body, fixture, colors[body_id], self.PPM, self.SCREEN_HEIGHT)
         pygame.display.flip()
